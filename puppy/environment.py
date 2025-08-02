@@ -39,7 +39,7 @@ class MarketEnvironment:
         if not isinstance(first_date, date):
             raise TypeError("env_data_pkl keys must be date type")
         try:
-            OneDateRecord.model_validate(env_data_pkl[first_date])
+            OneDateRecord.parse_obj(env_data_pkl[first_date])
         except ValidationError as e:
             raise e
         self.date_series = env_data_pkl.keys()
