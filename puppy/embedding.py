@@ -1,98 +1,68 @@
+# from langchain_community.embeddings import OpenAIEmbeddings
 import os
 import numpy as np
 from typing import List, Union
-from langchain_community.embeddings import OpenAIEmbeddings
+from sentence_transformers import SentenceTransformer
+from transformers import AutoTokenizer
 
 
-class OpenAILongerThanContextEmb:
+class LocalLongTextEmbedder:
     """
-    Embedding function with openai as embedding backend.
-    If the input is larger than the context size, the input is split into chunks of size `chunk_size` and embedded separately.
-    The final embedding is the average of the embeddings of the chunks.
-    Details see: https://github.com/openai/openai-cookbook/blob/main/examples/Embedding_long_inputs.ipynb
+    Embedding function using sentence-transformers/all-MiniLM-L6-v2 as embedding backend.
+    If the input is larger than the context size (token limit), the input is split into chunks
+    and embedded separately. The final embedding is the average of the embeddings of the chunks.
     """
 
     def __init__(
         self,
-        openai_api_key: Union[str, None] = None,
-        embedding_model: str = "text-embedding-ada-002",
-        chunk_size: int = 5000,
+        embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
+        chunk_size: int = 512,  # effective input limit of MiniLM-L6-v2 is ~256 tokens
         verbose: bool = False,
     ) -> None:
-        """
-        Initializes the Embedding object.
+        self.model_name = embedding_model
+        self.chunk_size = chunk_size
+        self.verbose = verbose
+        self.model = SentenceTransformer(self.model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
 
-        Args:
-            openai_api_key (str): The API key for OpenAI.
-            embedding_model (str, optional): The model to use for embedding. Defaults to "text-embedding-ada-002".
-            chunk_size (int, optional): The maximum number of token to send to openai embedding model at one time. Defaults to 5000.
-            verbose (bool, optional): Whether to show progress bar during embedding. Defaults to False.
+    def _tokenize_text(self, text: str) -> List[str]:
+        """Splits long text into chunks based on token length."""
+        tokens = self.tokenizer.tokenize(text)
+        chunks = []
+        for i in range(0, len(tokens), self.chunk_size):
+            chunk_tokens = tokens[i:i + self.chunk_size]
+            chunk_text = self.tokenizer.convert_tokens_to_string(chunk_tokens)
+            chunks.append(chunk_text)
+        return chunks
 
-        Returns:
-            None
-        """
-        self.openai_api_key = openai_api_key or os.environ.get("OPENAI_API_KEY")
-        self.emb_model = OpenAIEmbeddings(
-            model=embedding_model,
-            api_key=openai_api_key or os.environ.get("OPENAI_API_KEY"),
-            chunk_size=chunk_size,
-            show_progress_bar=verbose,
-        )
-
-    def _emb(self, text: Union[List[str], str]) -> List[List[float]]:
-        """
-        Asynchronously performs embedding on a list of text.
-
-        This method calls the `aembed_documents` method of the `emb_model` object to embed the input text.
-
-        Args:
-            self: The instance of the class.
-            text (List[str]): A list of text to be embedded.
-
-        Returns:
-            List[List[float]]: The embeddings of the input text as a list of lists of floats.
-
-        """
+    def _embed(self, text: Union[str, List[str]]) -> List[List[float]]:
         if isinstance(text, str):
             text = [text]
-        return self.emb_model.embed_documents(texts=text, chunk_size=None)
 
-    def __call__(self, text: Union[List[str], str]) -> np.ndarray:
+        embeddings = []
+        for doc in text:
+            chunks = self._tokenize_text(doc)
+            if self.verbose:
+                print(f"Embedding {len(chunks)} chunk(s) from input text.")
+
+            chunk_embeddings = self.model.encode(chunks)
+            avg_embedding = np.mean(chunk_embeddings, axis=0)
+            embeddings.append(avg_embedding)
+
+        return embeddings
+
+    def __call__(self, text: Union[str, List[str]]) -> np.ndarray:
         """
-        Performs embedding on a list of text.
-
-        This method calls the `_emb` method to asynchronously embed the input text using the `emb_model` object.
-
-        Args:
-            self: The instance of the class.
-            text (List[str]): A list of text to be embedded.
-
-        Returns:
-            np.array: The embedding of the input text as a NumPy array.
-
+        Encodes input text(s) and returns averaged embedding as np.ndarray.
         """
-        return np.array(self._emb(text)).astype("float32")
+        return np.array(self._embed(text)).astype("float32")
 
-    def get_embedding_dimension(self):
-        """
-        Returns the dimension of the embedding.
+    def get_embedding_dimension(self) -> int:
+        """Returns embedding dimension for the selected model."""
+        return self.model.get_sentence_embedding_dimension()
 
-        This method checks the value of `self.emb_model.model` and returns the corresponding embedding dimension. If the model is not implemented, a `NotImplementedError` is raised.
 
-        Args:
-            self: The instance of the class.
-
-        Returns:
-            int: The dimension of the embedding.
-
-        Raises:
-            NotImplementedError: Raised when the embedding dimension for the specified model is not implemented.
-
-        """
-        match self.emb_model.model:
-            case "text-embedding-ada-002":
-                return 1536
-            case _:
-                raise NotImplementedError(
-                    f"Embedding dimension for model {self.emb_model.model} not implemented"
-                )
+# embedder = LocalLongTextEmbedder(verbose = True)
+# text = "This is a long article or passage that you want to embed. " * 100  # simulate long input
+# embedding = embedder(text)
+# print("Embedding shape:", embedding.shape)

@@ -31,10 +31,9 @@ test_momentum_explanation = """The information below provides a summary of stock
 train_prompt = """Given the following information, can you explain to me why the financial market fluctuation from current day to the next day behaves like this? Just summarize the reason of the decision。
     Your should provide a summary information and the id of the information to support your summary.
 
-    ${investment_info}
+    {{investment_info}}
 
-    ${gr.complete_json_suffix_v2}
-    Your output should strictly conforms the following json format without any additional contents: {"summary_reason": string, "short_memory_index": number, "middle_memory_index": number, "long_memory_index": number, "reflection_memory_index": number}
+    {{complete_json_suffix_v2}}
 """
 # When cumulative return is positive or zero, you are a risk-seeking investor, positive information have a greater influence on your investment decisions, while negative information have a lesser impact.
 # But when cumulative return is negative, you are a risk-averse investor, negative information have a greater influence on your investment decisions, while positive information have a lesser impact.
@@ -47,7 +46,7 @@ test_prompt = """ Given the information, can you make an investment decision? Ju
     When it is really hard to make a 'buy'-or-'sell' decision, you could go with 'hold' option.
     You also need to provide the id of the information to support your decision.
 
-    ${investment_info}
+    {{investment_info}}
 
-    ${gr.complete_json_suffix_v2} }
+    {{complete_json_suffix_v2}}
 """

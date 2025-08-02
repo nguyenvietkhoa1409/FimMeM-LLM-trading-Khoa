@@ -427,10 +427,31 @@ def trading_reflection(
 
     try:
         # , validated_output
+        # complete_json_suffix_v2 = 'Your output should strictly conform to the following JSON format without any additional contents: {{"summary_reason": string, "short_memory_index": number, "middle_memory_index": number, "long_memory_index": number, "reflection_memory_index": number}}'
+        complete_json_suffix_v2 = (
+    'Your output should strictly conform to the following JSON format without any additional contents: '
+    '{{"summary_reason": "Example explanation", '
+    '"short_memory_index": 0, '
+    '"middle_memory_index": 1, '
+    '"long_memory_index": 2, '
+    '"reflection_memory_index": 3}}')
+
         validated_outcomes = guard(
             endpoint_func,
-            prompt_params={"investment_info": investment_info},
+            prompt_params={"investment_info": investment_info,
+                           "complete_json_suffix_v2": complete_json_suffix_v2},
         )
+        # 🔍 Inspect raw outputs from LLM before Guardrails validation
+        if guard.history and guard.history[0].raw_outputs:
+            print("🧠 RAW LLM OUTPUT:")
+            for i, raw_output in enumerate(guard.history[0].raw_outputs):
+                print(f"\n--- Raw Output {i} ---\n{raw_output}\n")
+
+            # Optional: write to file
+            with open("raw_llm_reflection_output.txt", "w", encoding="utf-8") as f:
+                for i, raw_output in enumerate(guard.history[0].raw_outputs):
+                    f.write(f"\n--- Raw Output {i} ---\n{raw_output}\n")
+        
         logger.info("Guardrails Raw LLM Outputs")
         for i, o in enumerate(guard.history[0].raw_outputs):
             logger.info(f"Reask {i}")

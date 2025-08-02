@@ -8,7 +8,7 @@ import numpy as np
 from datetime import date
 from itertools import repeat
 from sortedcontainers import SortedList
-from .embedding import OpenAILongerThanContextEmb
+from .embedding import LocalLongTextEmbedder
 from typing import List, Union, Dict, Any, Tuple, Callable
 from .memory_functions import (
     ImportanceScoreInitialization,
@@ -53,7 +53,7 @@ class MemoryDB:  # can possibly take multiple symbols
         self.jump_threshold_upper = jump_threshold_upper
         self.jump_threshold_lower = jump_threshold_lower
         self.emb_config = emb_config
-        self.emb_func = OpenAILongerThanContextEmb(**self.emb_config)
+        self.emb_func = LocalLongTextEmbedder(**self.emb_config)
         # self.emb_func = OpenAILongerThanContextEmb(**self.config["agent"]["agent_1"]["embedding"]["detail"])
         self.emb_dim = self.emb_func.get_embedding_dimension()
         self.importance_score_initialization_func = importance_score_initialization
