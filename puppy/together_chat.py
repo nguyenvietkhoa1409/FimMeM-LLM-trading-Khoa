@@ -24,7 +24,7 @@ class TogetherChat:
             "max_tokens": kwargs.get("max_tokens", 1024),
         }
 
-        response = httpx.post(self.endpoint, headers=self.headers, json=payload)
+        response = httpx.post(self.endpoint, headers=self.headers, json=payload, timeout=60)
 
         if response.status_code == 401:
             raise RuntimeError("Unauthorized: Check your Together API key.")

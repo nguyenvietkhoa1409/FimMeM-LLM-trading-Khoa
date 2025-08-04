@@ -1,5 +1,5 @@
 [chat]
-model = "deepseek-chat"
+model = "together-mistralai/Mixtral-8x7B-Instruct-v0.1"
 end_point = "https://api.together.xyz/v1/chat/completions"
 system_message = "You are a helpful assistant with deep knowledge of financial markets and equity trading."
 

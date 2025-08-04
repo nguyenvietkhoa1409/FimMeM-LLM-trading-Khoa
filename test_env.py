@@ -4,7 +4,6 @@ import subprocess
 import json
 
 # Step 1: Load .env into environment
-load_dotenv(dotenv_path=".env")
 
 # Step 2: Verify key is available
 api_key = os.getenv("TOGETHER_API_KEY")

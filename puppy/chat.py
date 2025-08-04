@@ -96,6 +96,7 @@ class ChatOpenAICompatible(ABC):
 
     def run_together_subprocess(self, prompt: str) -> str:
         try:
+            
             env = os.environ.copy()
             env["TOGETHER_API_KEY"] = os.environ.get("TOGETHER_API_KEY", "")
             result = subprocess.run(
@@ -162,6 +163,7 @@ class ChatOpenAICompatible(ABC):
                 response = httpx.post(self.end_point, headers=self.headers, json=payload, timeout=600.0)
 
             elif self.model.startswith("together"):
+                print("Running Together subprocess...")
                 return self.run_together_subprocess(input)
 
             else:
