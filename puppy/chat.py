@@ -3,8 +3,11 @@ import json
 import subprocess
 from abc import ABC
 from typing import Callable, Union, Dict, Any
+from dotenv import load_dotenv
 
 import httpx
+
+load_dotenv(dotenv_path=".env")
 
 class LongerThanContextError(Exception):
     pass
@@ -41,7 +44,7 @@ class ChatOpenAICompatible(ABC):
         model="gemini-pro",
         system_message: str = "You are a helpful assistant.",
         other_parameters: Union[Dict[str, Any], None] = None,
-        together_script_path : str = "together_chat_client.py",
+        together_script_path : str = "together_chat.py",
         together_venv_path: str = "venv_together",
     ):
         api_key = os.environ.get("OPENAI_API_KEY", "-")
@@ -50,6 +53,8 @@ class ChatOpenAICompatible(ABC):
         self.system_message = system_message
         self.together_script_path = together_script_path
         self.together_venv_path =os.path.join(together_venv_path, "Scripts", "python.exe")
+        
+        self.other_parameters = {} if other_parameters is None else other_parameters
 
         if model.startswith("gemini-pro"):
             proc_result = subprocess.run(["gcloud", "auth", "print-access-token"], capture_output=True, text=True)
@@ -72,7 +77,6 @@ class ChatOpenAICompatible(ABC):
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             }
-            self.other_parameters = {} if other_parameters is None else other_parameters
 
     def parse_response(self, response: httpx.Response) -> str:
         """
@@ -92,16 +96,22 @@ class ChatOpenAICompatible(ABC):
 
     def run_together_subprocess(self, prompt: str) -> str:
         try:
+            env = os.environ.copy()
+            env["TOGETHER_API_KEY"] = os.environ.get("TOGETHER_API_KEY", "")
             result = subprocess.run(
-                [self.together_venv_path, self.together_script_path],
+                [r"D:\Data science research\FinMem-LLM-StockTrading\venv_together\Scripts\python.exe", r"D:\Data science research\FinMem-LLM-StockTrading\puppy\together_chat.py"],
                 input=json.dumps([
     {"role": "system", "content": "You are a helpful assistant only capable of communicating with valid JSON, and no other text."},
     {"role": "user", "content": prompt}
                 ]),
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                env = env 
             )
+            print("STDOUT:", result.stdout)
+            print("STDERR:", result.stderr)
+            print("Return code:", result.returncode)
             return result.stdout.strip()
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f"Error running Together subprocess: {e.stderr.strip()}")
@@ -161,7 +171,7 @@ class ChatOpenAICompatible(ABC):
                 }
                 payload.update(self.other_parameters)
                 response = httpx.post(
-                    self.end_point, headers=self.headers, data=json.dumps(payload), timeout=600.0
+                    self.end_point, headers=self.headers, json=payload, timeout=600.0
                 )
 
             try:
